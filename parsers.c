@@ -189,7 +189,24 @@ int parse_command(char *split_cmd[], int pipe_mode)
 
 	else if (strcmp(split_cmd[0], "tree") == 0)
 	{
-		
+		if (pipe_mode) return -2;
+		long depth = strtoll(split_cmd[1], NULL, 10);
+		if (depth >= -1)
+		{
+			String indent_stack;
+			string_init(&indent_stack, 0);
+			string_resize(&indent_stack, 64);
+			char *cwd = getcwd(NULL, 0);
+			tree(ROOT_DIR, &indent_stack, (size_t)depth, 0);
+			chdir(cwd);
+			free(cwd);
+			string_free(&indent_stack);
+		}
+		else
+		{
+			print_msg("Error: Invalid depth");
+		}
+		return 2;
 	}
 
 	return -1;

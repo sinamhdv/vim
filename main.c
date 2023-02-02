@@ -391,6 +391,51 @@ void auto_indent_file(char *path)
 	save_buffer(&buf, path);
 }
 
+void tree(char *path, String *indent_stack, size_t max_depth, int isfile)
+{
+	if (indent_stack->len > max_depth) return;
+
+	// print the current line
+	for (int i = 0; i < (int)indent_stack->len - 1; i++)
+	{
+		if (indent_stack->arr[i] == '0')
+			string_printf(&outbuf, "|   ");
+		else
+			string_printf(&outbuf, "    ");
+	}
+	if (indent_stack->len) string_printf(&outbuf, "|__ ");
+	string_insert(&outbuf, path, strlen(path), outbuf.len);
+	string_pushc(&outbuf, '\n');
+
+	if (isfile) return;
+	chdir(path);
+	
+	// count children
+	DIR *dir = opendir(".");
+	struct dirent *ent;
+	size_t child_count = 0;
+	long start_loc = telldir(dir);
+	while ((ent = readdir(dir)) != NULL)
+		if ((ent->d_type == DT_DIR || ent->d_type == DT_REG) && ent->d_name[0] != '.')
+			child_count++;
+	seekdir(dir, start_loc);
+
+	// dfs on children
+	while ((ent = readdir(dir)) != NULL)
+	{
+		if (ent->d_type != DT_DIR && ent->d_type != DT_REG) continue;
+		if (ent->d_name[0] == '.') continue;
+		child_count--;
+		
+		string_pushc(indent_stack, (child_count == 0 ? '1' : '0'));
+		tree(ent->d_name, indent_stack, max_depth, ent->d_type == DT_REG);
+		string_popc(indent_stack);
+	}
+
+	closedir(dir);
+	chdir("..");
+}
+
 int main(void)
 {
 	// initialize global strings

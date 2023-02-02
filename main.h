@@ -7,6 +7,7 @@
 #include <ctype.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <dirent.h>
 
 #include "mystring.h"
 #include "utils.h"
@@ -35,5 +36,6 @@ void undo(char *path);
 void create_backup(char *path);
 int auto_indent_buf(String *buf);
 void auto_indent_file(char *path);
+void tree(char *path, String *indent_stack, size_t max_depth, int isfile);
 
 #endif	// __HEADER_MAIN_H__
