@@ -3,6 +3,7 @@
 String buf;		// current file buffer
 String outbuf;	// command output buffer
 String clip;	// clipboard
+String pipebuf;	// pipes buffer
 
 size_t pos2idx(String *buf, char *posstr)
 {
@@ -86,23 +87,23 @@ void cat_file(char *path)
 		return;
 	}
 	int c;
-	while ((c = fgetc(fp)) != EOF) putchar(c);
+	while ((c = fgetc(fp)) != EOF) string_pushc(&outbuf, c);
 	fclose(fp);
 }
 
-void insert_command(char *split_cmd[], int _file, int _str, int _pos)
+void insert_command(char *filename, char *posstr, char *str, size_t slen)
 {
-	char *path = convert_path(split_cmd[_file]);
+	char *path = convert_path(filename);
 	if (load_buffer(&buf, path) != -1)
 	{
-		size_t idx = pos2idx(&buf, split_cmd[_pos]);
+		size_t idx = pos2idx(&buf, posstr);
 		if (idx == -1)
 		{
 			print_msg("Error: Invalid position");
 		}
 		else
 		{
-			string_insert(&buf, split_cmd[_str], strlen(split_cmd[_str]), idx);
+			string_insert(&buf, str, slen, idx);
 			save_buffer(&buf, path);
 		}
 	}
@@ -211,7 +212,7 @@ void compare(char *file1, char *file2)
 		}
 		if (strcmp(lines[0], lines[1]) != 0)
 		{
-			printf("==================== #%d ====================\n< %s\n> %s\n", line_no, lines[0], lines[1]);
+			string_printf(&outbuf, "==================== #%d ====================\n< %s\n> %s\n", line_no, lines[0], lines[1]);
 		}
 		free(lines[0]);
 		free(lines[1]);
@@ -225,23 +226,23 @@ void compare(char *file1, char *file2)
 		return;
 	}
 	int remaining_idx = (ret[1] != -1);
-	for (int i = 0; i < 20; i++) putchar(remaining_idx ? '>' : '<');
+	for (int i = 0; i < 20; i++) string_pushc(&outbuf, remaining_idx ? '>' : '<');
 	int max_lines = count_file_lines(fps[remaining_idx]);
-	printf(" #%d - #%d ", line_no, max_lines);
-	for (int i = 0; i < 20; i++) putchar(remaining_idx ? '>' : '<');
-	putchar('\n');
+	string_printf(&outbuf, " #%d - #%d ", line_no, max_lines);
+	for (int i = 0; i < 20; i++) string_pushc(&outbuf, remaining_idx ? '>' : '<');
+	string_pushc(&outbuf, '\n');
 
 	char *tmp = strchr(lines[remaining_idx], '\n');
 	if (tmp) *tmp = 0;
-	printf("%s\n", lines[remaining_idx]);
+	string_printf(&outbuf, "%s\n", lines[remaining_idx]);
 
 	int ch = fgetc(fps[remaining_idx]);
 	while (ch != EOF)
 	{
-		putchar(ch);
+		string_pushc(&outbuf, ch);
 		ch = fgetc(fps[remaining_idx]);
 	}
-	putchar('\n');
+	string_pushc(&outbuf, '\n');
 
 	fclose(fps[0]);
 	fclose(fps[1]);
@@ -393,8 +394,7 @@ void auto_indent_file(char *path)
 int main(void)
 {
 	// initialize global strings
-	string_init(&outbuf, 1);
-	outbuf.len = 0;
+	string_init(&outbuf, 0);
 
 	while (1)
 	{

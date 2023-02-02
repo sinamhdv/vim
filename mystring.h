@@ -7,6 +7,7 @@
 #include <ctype.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 typedef struct
 {
@@ -23,5 +24,7 @@ void string_pushc(String *str, char c);
 void string_popc(String *str);
 void string_insert(String *str, char *s, size_t slen, size_t pos);
 void string_remove(String *str, size_t L, size_t R);
+void string_clear(String *str);
+void string_printf(String *str, char *fmt, ...);
 
 #endif	// __HEADER_MYSTRING_H__

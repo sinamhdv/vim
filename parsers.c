@@ -76,40 +76,61 @@ int split(char *cmd, char *res[])
 	return size;
 }
 
-int parse_command(char *split_cmd[])
+int parse_command(char *split_cmd[], int pipe_mode)
 {
+	if (pipe_mode)
+	{
+		string_init(&pipebuf, outbuf.len);
+		memcpy(pipebuf.arr, outbuf.arr, outbuf.len);
+	}
+	string_clear(&outbuf);
+
 	if (strcmp(split_cmd[0], "create") == 0)
 	{
+		if (pipe_mode) return -2;
 		char *path = convert_path(split_cmd[2]);
 		create_file(path);
 		free(path);
 		return 3;
 	}
+
 	else if (strcmp(split_cmd[0], "cat") == 0)
 	{
+		if (pipe_mode) return -2;
 		char *path = convert_path(split_cmd[2]);
 		cat_file(path);
 		free(path);
 		return 3;
 	}
+
 	else if (strcmp(split_cmd[0], "insert") == 0)
 	{
+		int _argc = 7 - 2 * pipe_mode;
 		int _file = 0, _str = 0, _pos = 0;
-		for (int i = 1; split_cmd[i] != NULL; i++)
+		for (int i = 1; i < _argc; i++)
 		{
 			if (strcmp(split_cmd[i], "--file") == 0) _file = ++i;
-			else if (strcmp(split_cmd[i], "--str") == 0) _str = ++i;
+			else if (strcmp(split_cmd[i], "--str") == 0)
+			{
+				if (pipe_mode) return -3;
+				_str = ++i;
+			}
 			else if (strcmp(split_cmd[i], "--pos") == 0) _pos = ++i;
 		}
-		insert_command(split_cmd, _file, _str, _pos);
-		return 7;
+		if (pipe_mode)
+			insert_command(split_cmd[_file], split_cmd[_pos], pipebuf.arr, pipebuf.len);
+		else
+			insert_command(split_cmd[_file], split_cmd[_pos], split_cmd[_str], strlen(split_cmd[_str]));
+		return _argc;
 	}
+
 	else if (strcmp(split_cmd[0], "remove") == 0 || \
 			strcmp(split_cmd[0], "copy") == 0 || \
 			strcmp(split_cmd[0], "cut") == 0)
 	{
+		if (pipe_mode) return -2;
 		int _file = 0, _pos = 0, _size = 0, _fw = 0;
-		for (int i = 1; split_cmd[i] != NULL; i++)
+		for (int i = 1; i < 8; i++)
 		{
 			if (strcmp(split_cmd[i], "--file") == 0) _file = ++i;
 			else if (strcmp(split_cmd[i], "--pos") == 0) _pos = ++i;
@@ -123,10 +144,12 @@ int parse_command(char *split_cmd[])
 		selection_action(split_cmd, _file, _pos, _size, _fw, action);
 		return 8;
 	}
+
 	else if (strcmp(split_cmd[0], "paste") == 0)
 	{
+		if (pipe_mode) return -2;
 		int _file = 0, _pos = 0;
-		for (int i = 1; split_cmd[i] != NULL; i++)
+		for (int i = 1; i < 5; i++)
 		{
 			if (strcmp(split_cmd[i], "--file") == 0) _file = ++i;
 			else if (strcmp(split_cmd[i], "--pos") == 0) _pos = ++i;
@@ -134,8 +157,10 @@ int parse_command(char *split_cmd[])
 		paste_command(split_cmd, _file, _pos);
 		return 5;
 	}
+
 	else if (strcmp(split_cmd[0], "compare") == 0)
 	{
+		if (pipe_mode) return -2;
 		char *path1 = convert_path(split_cmd[1]);
 		char *path2 = convert_path(split_cmd[2]);
 		compare(path1, path2);
@@ -143,20 +168,30 @@ int parse_command(char *split_cmd[])
 		free(path2);
 		return 3;
 	}
+
 	else if (strcmp(split_cmd[0], "undo") == 0)
 	{
+		if (pipe_mode) return -2;
 		char *path = convert_path(split_cmd[2]);
 		undo(path);
 		free(path);
 		return 3;
 	}
+
 	else if (strcmp(split_cmd[0], "auto-indent") == 0)
 	{
+		if (pipe_mode) return -2;
 		char *path = convert_path(split_cmd[1]);
 		auto_indent_file(path);
 		free(path);
 		return 2;
 	}
+
+	else if (strcmp(split_cmd[0], "tree") == 0)
+	{
+		
+	}
+
 	return -1;
 }
 
@@ -169,16 +204,32 @@ int parse_line(char *cmd)
 	char *split_cmd[MAX_TOKENS];
 	int tokens = split(cmd, split_cmd);
 	if (tokens == 0) return 0;
-	
-	int idx = parse_command(split_cmd);
-	while (split_cmd[idx] != NULL)
+
+	int ret = parse_command(split_cmd, 0);
+	int idx = ret + 1;
+	while (ret >= 0 && split_cmd[idx - 1] != NULL)
 	{
-		idx = parse_command(split_cmd + idx + 1);
-		if (idx == -1)
-		{
-			print_msg("Error: Invalid command");
-			break;
-		}
+		ret = parse_command(split_cmd + idx, 1);
+		string_free(&pipebuf);
+		idx += ret + 1;
+	}
+
+	if (ret == -1)
+	{
+		print_msg("Error: Invalid command");
+	}
+	else if (ret == -2)
+	{
+		print_msg("Error: Invalid command after pipe");
+	}
+	else if (ret == -3)
+	{
+		print_msg("Error: Unnecessary --str found after pipe");
+	}
+
+	if (outbuf.len && ret >= 0)
+	{
+		string_print(&outbuf);
 	}
 
 	// clean up

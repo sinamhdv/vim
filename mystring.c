@@ -2,13 +2,17 @@
 
 void string_init(String *str, size_t size)
 {
-	str->arr = malloc(size * sizeof(char));
 	str->len = str->cap = size;
+	if (size == 0) str->cap = 1;
+	str->arr = malloc(str->cap * sizeof(char));
 }
 
 void string_free(String *str)
 {
 	free(str->arr);
+	str->arr = NULL;
+	str->len = 0;
+	str->cap = 0;
 }
 
 void string_resize(String *str, size_t size)
@@ -50,4 +54,22 @@ void string_remove(String *str, size_t L, size_t R)
 {
 	memmove(str->arr + L, str->arr + R, str->len - R);
 	str->len -= (R - L);
+}
+
+void string_clear(String *str)
+{
+	str->len = 0;
+}
+
+void string_printf(String *str, char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	size_t size = vsnprintf(NULL, 0, fmt, args) + 1;	// +1 to include the null byte
+	va_end(args);
+	while (str->cap < str->len + size) string_resize(str, 2 * str->cap);
+	va_start(args, fmt);
+	vsprintf(str->arr + str->len, fmt, args);
+	str->len += size - 1;
+	va_end(args);
 }

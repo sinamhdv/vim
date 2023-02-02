@@ -18,6 +18,7 @@
 extern String buf;
 extern String outbuf;
 extern String clip;
+extern String pipebuf;
 
 char *skip_space(char *cmd);
 
@@ -29,7 +30,7 @@ char *readtok(char *cmd);
 int split(char *cmd, char *res[]);
 
 /* parse a single command (not including pipes) */
-int parse_command(char *split_cmd[]);
+int parse_command(char *split_cmd[], int pipe_mode);
 
 /* parse one line of input and handle pipes between commands */
 int parse_line(char *cmd);

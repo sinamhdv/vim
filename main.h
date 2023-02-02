@@ -16,13 +16,14 @@
 extern String buf;
 extern String outbuf;
 extern String clip;
+extern String pipebuf;
 
 size_t pos2idx(String *buf, char *posstr);
 int load_buffer(String *buf, char *path);
 void save_buffer(String *buf, char *path);
 void create_file(char *path);
 void cat_file(char *path);
-void insert_command(char *split_cmd[], int _file, int _str, int _pos);
+void insert_command(char *filename, char *posstr, char *str, size_t slen);
 void selection_action(char *split_cmd[], int _file, int _pos, int _size, int _fw, void (*action)(size_t, size_t));
 void removestr(size_t L, size_t R);
 void copystr(size_t L, size_t R);

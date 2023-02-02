@@ -18,6 +18,7 @@
 extern String buf;
 extern String outbuf;
 extern String clip;
+extern String pipebuf;
 
 char *convert_path(char *path);
 void print_msg(char *msg);
