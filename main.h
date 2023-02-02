@@ -37,5 +37,7 @@ void create_backup(char *path);
 int auto_indent_buf(String *buf);
 void auto_indent_file(char *path);
 void tree(char *path, String *indent_stack, size_t max_depth, int isfile);
+size_t grep_file(char *root_path, char *pattern, int print_lines);
+void grep_command(char *split_cmd[], int _file1, int _filen, int _c, int _l, char *str);
 
 #endif	// __HEADER_MAIN_H__

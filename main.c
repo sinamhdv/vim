@@ -436,6 +436,55 @@ void tree(char *path, String *indent_stack, size_t max_depth, int isfile)
 	chdir("..");
 }
 
+size_t grep_file(char *root_path, char *pattern, int print_lines)
+{
+	char *path = convert_path(root_path);
+	if (address_error(path)) return 0;
+	if (file_not_found_error(path)) return 0;
+	
+	FILE *fp = fopen(path, "r");
+	size_t cnt = 0;
+	char *line = NULL;
+	size_t size = 0;
+	while (getline(&line, &size, fp) != -1)
+	{
+		char *tmp = strchr(line, '\n');
+		if (tmp) *tmp = 0;
+		char *match = strstr(line, pattern);
+		if (match != NULL)
+		{
+			cnt++;
+			if (print_lines)
+			{
+				string_printf(&outbuf, "%s: %s\n", root_path, line);
+			}
+		}
+		size = 0;
+		free(line);
+		line = NULL;
+	}
+
+	fclose(fp);
+	free(path);
+	return cnt;
+}
+
+void grep_command(char *split_cmd[], int _file1, int _filen, int _c, int _l, char *str)
+{
+	char *tmp = strchr(str, '\n');
+	if (tmp) *tmp = 0;
+	size_t match_count = 0;
+	for (int i = _file1; i <= _filen; i++)
+	{
+		size_t matches = grep_file(split_cmd[i], str,_c == 0 && _l == 0);
+		match_count += matches;
+		if (_l && matches)
+			string_printf(&outbuf, "%s\n", split_cmd[i]);
+	}
+	if (_c)
+		string_printf(&outbuf, "%lu\n", match_count);
+}
+
 int main(void)
 {
 	// initialize global strings

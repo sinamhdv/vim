@@ -209,6 +209,41 @@ int parse_command(char *split_cmd[], int pipe_mode)
 		return 2;
 	}
 
+	else if (strcmp(split_cmd[0], "grep") == 0)
+	{
+		int _file1 = 0, _filen = 0, _str = 0, _c = 0, _l = 0;
+		int i;
+		for (i = 1; ; i++)
+		{
+			if (pipe_mode && (split_cmd[i] == NULL || split_cmd[i][0] == '=')) break;
+			if (!pipe_mode && _str && (split_cmd[i] == NULL || split_cmd[i][0] == '=')) break;
+
+			if (strcmp(split_cmd[i], "--str") == 0)
+			{
+				if (pipe_mode) return -3;
+				_str = ++i;
+			}
+			else if (strcmp(split_cmd[i], "-c") == 0) _c = 1;
+			else if (strcmp(split_cmd[i], "-l") == 0) _l = 1;
+			else if (strcmp(split_cmd[i], "--files") == 0)
+			{
+				_file1 = ++i;
+				while (split_cmd[i + 1] != NULL && split_cmd[i + 1][0] == '/') i++;
+				_filen = i;
+			}
+		}
+		if (pipe_mode)
+		{
+			if (pipebuf.cap == pipebuf.len) string_resize(&pipebuf, pipebuf.len + 1);
+			pipebuf.arr[pipebuf.len] = 0;
+			grep_command(split_cmd, _file1, _filen, _c, _l, pipebuf.arr);
+		}
+		else
+			grep_command(split_cmd, _file1, _filen, _c, _l, split_cmd[_str]);
+
+		return i;
+	}
+
 	return -1;
 }
 
