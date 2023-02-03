@@ -485,6 +485,148 @@ void grep_command(char *split_cmd[], int _file1, int _filen, int _c, int _l, cha
 		string_printf(&outbuf, "%lu\n", match_count);
 }
 
+size_t get_word(String *buf, size_t idx)
+{
+	size_t ans = 0;
+	for (size_t i = 1; i <= idx; i++)
+		if (isspace(buf->arr[i]) && !isspace(buf->arr[i - 1]))
+			ans++;
+	return ans;
+}
+
+FindAns find_buf(char *str, char *pat)
+{
+	FindAns res = {-1, -1};
+	size_t slen = strlen(str);
+	size_t plen = strlen(pat);
+	char *star = strchr(pat, STAR_CHAR);
+	char *space = strchr(pat, ' ');
+	if (space && star)	// complex wildcards
+	{
+		*star = 0;
+		char *ptr;
+		size_t begin = 0;
+		while ((ptr = strstr(str + begin, pat)) != NULL)
+		{
+
+		}
+	}
+	else if (star == pat)	// *a
+	{
+		
+	}
+	else if (star)	// a*
+	{
+		*star = 0;
+		char *ptr = strstr(str, pat);
+		if (ptr != NULL)
+		{
+			res.L = ptr - str;
+			res.R = ptr - str + plen - 2;
+			while (!isspace(str[res.R + 1]) && str[res.R + 1] != '\0') res.R++;
+		}
+	}
+	else	// no wildcard
+	{
+		char *ptr = strstr(str, pat);
+		if (ptr != NULL)
+		{
+			res.L = ptr - str;
+			res.R = ptr - str + plen - 1;
+		}
+	}
+	return res;
+}
+
+FindAns *findall_buf(char *str, char *pat)
+{
+	FindAns *res = malloc(8 * sizeof(FindAns));
+	size_t cap = 8;
+	size_t len = 0;
+	FindAns cur = {};
+	size_t begin = 0;
+	while ((cur = find_buf(str + begin, pat)).L != -1)
+	{
+		cur.L += begin;
+		cur.R += begin;
+		begin = cur.R + 1;
+		if (len == cap)
+		{
+			cap *= 2;
+			res = realloc(res, cap * sizeof(FindAns));
+		}
+		res[len++] = cur;
+	}
+	if (len == cap)
+	{
+		cap *= 2;
+		res = realloc(res, cap * sizeof(FindAns));
+	}
+	res[len].L = res[len].R = -1;
+	return res;
+}
+
+void find_command(char *filename, int _count, int _has_at, int _at, int _all, int _byword, char *pat)
+{
+	if (_count && (_has_at || _all || _byword)) {
+		print_msg("Error: Invalid options");
+		return;
+	}
+	else if (_has_at && _all) {
+		print_msg("Error: Invalid options");
+		return;
+	}
+	else if (_has_at && _at <= 0) {
+		print_msg("Error: Invalid -at argument");
+		return;
+	}
+
+	char *tmp = strchr(pat, '\n');
+	if (tmp) *tmp = 0;
+	parsestr_wildcard(pat);
+	char *path = convert_path(filename);
+	if (load_buffer(&buf, path) != -1)
+	{
+		string_null_terminate(&buf);
+		FindAns *res = findall_buf(buf.arr, pat);
+		if (_count)
+		{
+			size_t size = 0;
+			while (res[size].L != -1) size++;
+			string_printf(&outbuf, "%lu\n", size);
+		}
+		else if (_has_at)
+		{
+			size_t size = 0;
+			while (res[size].L != -1) size++;
+			if (_at > size)
+				print_msg("Not enough instances of pattern");
+			else
+				string_printf(&outbuf, "%lu\n", (_byword ? get_word(&buf, res[_at - 1].L) : res[_at - 1].L));
+		}
+		else if (_all)
+		{
+			if (res[0].L == -1)
+				print_msg("Pattern not found");
+			else
+			{
+				for (size_t i = 0; res[i].L != -1; i++)
+					string_printf(&outbuf, (res[i + 1].L != -1 ? "%lu, " : "%lu"), (_byword ? get_word(&buf, res[i].L) : res[i].L));
+				string_pushc(&outbuf, '\n');
+			}
+		}
+		else
+		{
+			if (res[0].L == -1)
+				print_msg("Pattern not found");
+			else
+				string_printf(&outbuf, "%lu\n", (_byword ? get_word(&buf, res[0].L) : res[0].L));
+		}
+		free(res);
+	}
+	free(path);
+}
+
 int main(void)
 {
 	// initialize global strings

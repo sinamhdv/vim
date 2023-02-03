@@ -73,3 +73,10 @@ void string_printf(String *str, char *fmt, ...)
 	str->len += size - 1;
 	va_end(args);
 }
+
+void string_null_terminate(String *str)
+{
+	if (str->len == str->cap)
+		string_resize(str, str->len + 1);
+	str->arr[str->len] = 0;
+}

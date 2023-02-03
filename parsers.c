@@ -41,39 +41,84 @@ int split(char *cmd, char *res[])
 		char *end = readtok(cmd);
 		if (*cmd == '"') cmd++;
 		res[size] = malloc(end - cmd);
-
-		char *ptr = res[size];
-		for (int i = 0; i < end - cmd - 1; i++)
-		{
-			if (cmd[i] == '\\')
-			{
-				if (cmd[i + 1] == 'n') {
-					*ptr++ = '\n';
-					i++;
-				}
-				else if (cmd[i + 1] == '\\') {
-					*ptr++ = '\\';
-					i++;
-				}
-				else if (cmd[i + 1] == '"') {
-					*ptr++ = '"';
-					i++;
-				}
-				else {
-					*ptr++ = cmd[i];
-				}
-			}
-			else
-			{
-				*ptr++ = cmd[i];
-			}
-		}
-		*ptr = 0;
+		strcpy(res[size], cmd);
 		cmd = end;
 		size++;
 	}
 	res[size] = NULL;
 	return size;
+}
+
+void parsestr(char *cmd)
+{
+	char *ptr = cmd;
+	size_t slen = strlen(cmd);
+	for (size_t i = 0; i < slen; i++)
+	{
+		if (cmd[i] == '\\')
+		{
+			if (cmd[i + 1] == 'n') {
+				*ptr++ = '\n';
+				i++;
+			}
+			else if (cmd[i + 1] == '\\') {
+				*ptr++ = '\\';
+				i++;
+			}
+			else if (cmd[i + 1] == '"') {
+				*ptr++ = '"';
+				i++;
+			}
+			else {
+				*ptr++ = cmd[i];
+			}
+		}
+		else
+		{
+			*ptr++ = cmd[i];
+		}
+	}
+	*ptr = 0;
+}
+
+void parsestr_wildcard(char *cmd)
+{
+	char *ptr = cmd;
+	size_t slen = strlen(cmd);
+	for (size_t i = 0; i < slen; i++)
+	{
+		if (cmd[i] == '\\')
+		{
+			if (cmd[i + 1] == 'n') {
+				*ptr++ = '\n';
+				i++;
+			}
+			else if (cmd[i + 1] == '\\') {
+				*ptr++ = '\\';
+				i++;
+			}
+			else if (cmd[i + 1] == '"') {
+				*ptr++ = '"';
+				i++;
+			}
+			else if (cmd[i + 1] == '*') {
+				*ptr++ = '*';
+				i++;
+			}
+			else {
+				*ptr++ = cmd[i];
+			}
+		}
+		else if (cmd[i] == '*')
+		{
+			*ptr++ = STAR_CHAR;
+		}
+		else
+		{
+			*ptr++ = cmd[i];
+		}
+	}
+	*ptr = 0;
 }
 
 int parse_command(char *split_cmd[], int pipe_mode)
@@ -88,6 +133,7 @@ int parse_command(char *split_cmd[], int pipe_mode)
 	if (strcmp(split_cmd[0], "create") == 0)
 	{
 		if (pipe_mode) return -2;
+		parsestr(split_cmd[2]);
 		char *path = convert_path(split_cmd[2]);
 		create_file(path);
 		free(path);
@@ -97,6 +143,7 @@ int parse_command(char *split_cmd[], int pipe_mode)
 	else if (strcmp(split_cmd[0], "cat") == 0)
 	{
 		if (pipe_mode) return -2;
+		parsestr(split_cmd[2]);
 		char *path = convert_path(split_cmd[2]);
 		cat_file(path);
 		free(path);
@@ -117,6 +164,10 @@ int parse_command(char *split_cmd[], int pipe_mode)
 			}
 			else if (strcmp(split_cmd[i], "--pos") == 0) _pos = ++i;
 		}
+		
+		parsestr(split_cmd[_file]);
+		if (!pipe_mode) parsestr(split_cmd[_str]);
+
 		if (pipe_mode)
 			insert_command(split_cmd[_file], split_cmd[_pos], pipebuf.arr, pipebuf.len);
 		else
@@ -137,6 +188,9 @@ int parse_command(char *split_cmd[], int pipe_mode)
 			else if (strcmp(split_cmd[i], "-size") == 0) _size = ++i;
 			else if (strcmp(split_cmd[i], "-f") == 0) _fw = 1;
 		}
+
+		parsestr(split_cmd[_file]);
+
 		void (*action)(size_t, size_t);
 		if (strcmp(split_cmd[0], "remove") == 0) action = removestr;
 		else if (strcmp(split_cmd[0], "copy") == 0) action = copystr;
@@ -154,6 +208,7 @@ int parse_command(char *split_cmd[], int pipe_mode)
 			if (strcmp(split_cmd[i], "--file") == 0) _file = ++i;
 			else if (strcmp(split_cmd[i], "--pos") == 0) _pos = ++i;
 		}
+		parsestr(split_cmd[_file]);
 		paste_command(split_cmd, _file, _pos);
 		return 5;
 	}
@@ -161,6 +216,8 @@ int parse_command(char *split_cmd[], int pipe_mode)
 	else if (strcmp(split_cmd[0], "compare") == 0)
 	{
 		if (pipe_mode) return -2;
+		parsestr(split_cmd[1]);
+		parsestr(split_cmd[2]);
 		char *path1 = convert_path(split_cmd[1]);
 		char *path2 = convert_path(split_cmd[2]);
 		compare(path1, path2);
@@ -172,6 +229,7 @@ int parse_command(char *split_cmd[], int pipe_mode)
 	else if (strcmp(split_cmd[0], "undo") == 0)
 	{
 		if (pipe_mode) return -2;
+		parsestr(split_cmd[2]);
 		char *path = convert_path(split_cmd[2]);
 		undo(path);
 		free(path);
@@ -181,6 +239,7 @@ int parse_command(char *split_cmd[], int pipe_mode)
 	else if (strcmp(split_cmd[0], "auto-indent") == 0)
 	{
 		if (pipe_mode) return -2;
+		parsestr(split_cmd[1]);
 		char *path = convert_path(split_cmd[1]);
 		auto_indent_file(path);
 		free(path);
@@ -232,15 +291,54 @@ int parse_command(char *split_cmd[], int pipe_mode)
 				_filen = i;
 			}
 		}
+
+		if (!pipe_mode) parsestr(split_cmd[_str]);
+		for (int i = _file1; i <= _filen; i++) parsestr(split_cmd[i]);
+
 		if (pipe_mode)
 		{
-			if (pipebuf.cap == pipebuf.len) string_resize(&pipebuf, pipebuf.len + 1);
-			pipebuf.arr[pipebuf.len] = 0;
+			string_null_terminate(&pipebuf);
 			grep_command(split_cmd, _file1, _filen, _c, _l, pipebuf.arr);
 		}
 		else
 			grep_command(split_cmd, _file1, _filen, _c, _l, split_cmd[_str]);
 
+		return i;
+	}
+
+	else if (strcmp(split_cmd[0], "find") == 0)
+	{
+		int _file = 0, _str = 0, _count = 0, _has_at = 0, _at = 0, _all = 0, _byword = 0;
+		int i;
+		for (i = 0; ; i++)
+		{
+			if (pipe_mode && (split_cmd[i] == NULL || split_cmd[i][0] == '=')) break;
+			if (!pipe_mode && _str && (split_cmd[i] == NULL || split_cmd[i][0] == '=')) break;
+
+			if (strcmp(split_cmd[i], "--file") == 0) _file = ++i;
+			else if (strcmp(split_cmd[i], "--str") == 0)
+			{
+				if (pipe_mode) return -3;
+				_str = ++i;
+			}
+			else if (strcmp(split_cmd[i], "-count") == 0) _count = 1;
+			else if (strcmp(split_cmd[i], "-all") == 0) _all = 1;
+			else if (strcmp(split_cmd[i], "-byword") == 0) _byword = 1;
+			else if (strcmp(split_cmd[i], "-at") == 0)
+			{
+				_at = (int)strtoll(split_cmd[++i], NULL, 10);
+				_has_at = 1;
+			}
+		}
+		parsestr(split_cmd[_file]);
+
+		if (pipe_mode)
+		{
+			string_null_terminate(&pipebuf);
+			find_command(split_cmd[_file], _count, _has_at, _at, _all, _byword, pipebuf.arr);
+		}
+		else
+			find_command(split_cmd[_file], _count, _has_at, _at, _all, _byword, split_cmd[_str]);
 		return i;
 	}
 
