@@ -8,11 +8,6 @@ char *convert_path(char *path)
 	return res;
 }
 
-void print_msg(char *msg)
-{
-	puts(msg);
-}
-
 int address_error(char *path)
 {
 	char *ptr = strrchr(path, '/');
@@ -88,4 +83,15 @@ void copy_file(char *src, char *dst)
 	}
 	fclose(fr);
 	fclose(fw);
+}
+
+int count_digits(int num)
+{
+	int cnt = 0;
+	while (num)
+	{
+		num /= 10;
+		cnt++;
+	}
+	return cnt;
 }

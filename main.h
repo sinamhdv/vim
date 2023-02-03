@@ -8,49 +8,53 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <signal.h>
+#include <ncurses.h>
 
 #include "mystring.h"
-#include "utils.h"
 #include "parsers.h"
-#include "main.h"
+#include "commands.h"
+#include "utils.h"
 
 extern String buf;
+extern String inpbuf;
 extern String outbuf;
 extern String clip;
 extern String pipebuf;
 
-typedef struct
+#define SCR_HEIGHT 55
+#define SCR_WIDTH 203
+
+#define MODE_COLOR 1
+#define FILENAME_COLOR 2
+#define LINENO_COLOR 3
+#define ERROR_COLOR 4
+
+#define MAX_CMD_LEN 1024
+#define MAX_FILENAME 1024
+
+typedef enum
 {
-	size_t L;
-	size_t R;
-} FindAns;
+	NORMAL = 0,
+	INSERT = 1,
+	VISUAL = 2
+} Mode;
 
-#define STAR_CHAR '\x80'
-
-size_t pos2idx(String *buf, char *posstr);
-int load_buffer(String *buf, char *path);
-void save_buffer(String *buf, char *path);
-void create_file(char *path);
-void cat_file(char *path);
-void insert_command(char *filename, char *posstr, char *str, size_t slen);
-void selection_action(char *split_cmd[], int _file, int _pos, int _size, int _fw, void (*action)(size_t, size_t));
-void removestr(size_t L, size_t R);
-void copystr(size_t L, size_t R);
-void cutstr(size_t L, size_t R);
-void pastestr(size_t idx);
-void paste_command(char *split_cmd[], int _file, int _pos);
-void compare(char *file1, char *file2);
-void undo(char *path);
-void create_backup(char *path);
-int auto_indent_buf(String *buf);
-void auto_indent_file(char *path);
-void tree(char *path, String *indent_stack, size_t max_depth, int isfile);
-size_t grep_file(char *root_path, char *pattern, int print_lines);
-void grep_command(char *split_cmd[], int _file1, int _filen, int _c, int _l, char *str);
-size_t get_word(String *buf, size_t idx);
-FindAns find_buf(char *str, char *pat);
-FindAns *findall_buf(char *str, char *pat);
-void find_command(char *filename, int _count, int _has_at, int _at, int _all, int _byword, char *pat);
-void replace_command(char *filename, char *old, char *new, int _has_at, int _at, int _all);
+void print_msg(char *msg);
+void clearline(int num);
+int saveas_file(char *rtpath);
+void save_file(void);
+char get_prompt(char *msg);
+void close_file(void);
+void init_new_buf(String *buf);
+void open_file(char *path);
+void print_msg(char *msg);
+void print_mode_filename(void);
+void print_line_numbers(void);
+void print_buffer(String *buf);
+void draw_window(void);
+void command_mode(char start_char);
+int input_loop(void);
+void sigint_handler(int signum);
 
 #endif	// __HEADER_MAIN_H__

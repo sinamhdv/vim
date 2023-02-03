@@ -7,11 +7,13 @@
 #include <ctype.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <ncurses.h>
 
 #include "mystring.h"
 #include "utils.h"
 #include "parsers.h"
 #include "main.h"
+#include "commands.h"
 
 #define MAX_TOKENS 1024
 

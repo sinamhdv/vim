@@ -128,7 +128,8 @@ int parse_command(char *split_cmd[], int pipe_mode)
 		string_init(&pipebuf, outbuf.len);
 		memcpy(pipebuf.arr, outbuf.arr, outbuf.len);
 	}
-	string_clear(&outbuf);
+	string_free(&outbuf);
+	string_init(&outbuf, 0);
 
 	if (strcmp(split_cmd[0], "create") == 0)
 	{
@@ -380,6 +381,30 @@ int parse_command(char *split_cmd[], int pipe_mode)
 		return i;
 	}
 
+	else if (strcmp(split_cmd[0], "open") == 0)
+	{
+		parsestr(split_cmd[1]);
+		char *path = convert_path(split_cmd[1]);
+		open_file(path);
+		free(path);
+		return 2;
+	}
+
+	else if (strcmp(split_cmd[0], "save") == 0)
+	{
+		save_file();
+		return 1;
+	}
+	
+	else if (strcmp(split_cmd[0], "saveas") == 0)
+	{
+		parsestr(split_cmd[1]);
+		char *path = convert_path(split_cmd[1]);
+		saveas_file(path);
+		free(path);
+		return 2;
+	}
+
 	return -1;
 }
 
@@ -402,6 +427,9 @@ int parse_line(char *cmd)
 		idx += ret + 1;
 	}
 
+	for (int i = 0; i < tokens; i++)
+		free(split_cmd[i]);
+
 	if (ret == -1)
 	{
 		print_msg("Error: Invalid command");
@@ -414,14 +442,8 @@ int parse_line(char *cmd)
 	{
 		print_msg("Error: Unnecessary --str found after pipe");
 	}
+	else
+		ret = 0;
 
-	if (outbuf.len && ret >= 0)
-	{
-		string_print(&outbuf);
-	}
-
-	// clean up
-	for (int i = 0; i < tokens; i++)
-		free(split_cmd[i]);
-	return 0;
+	return ret;
 }

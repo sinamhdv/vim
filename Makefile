@@ -2,5 +2,5 @@ CC = gcc
 CFLAGS = -g -Wall
 
 all:
-	$(CC) $(CFLAGS) main.c parsers.c utils.c mystring.c
+	$(CC) $(CFLAGS) main.c commands.c parsers.c utils.c mystring.c -lncurses
 
