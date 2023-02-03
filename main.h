@@ -47,6 +47,10 @@ void auto_indent_file(char *path);
 void tree(char *path, String *indent_stack, size_t max_depth, int isfile);
 size_t grep_file(char *root_path, char *pattern, int print_lines);
 void grep_command(char *split_cmd[], int _file1, int _filen, int _c, int _l, char *str);
+size_t get_word(String *buf, size_t idx);
+FindAns find_buf(char *str, char *pat);
+FindAns *findall_buf(char *str, char *pat);
 void find_command(char *filename, int _count, int _has_at, int _at, int _all, int _byword, char *pat);
+void replace_command(char *filename, char *old, char *new, int _has_at, int _at, int _all);
 
 #endif	// __HEADER_MAIN_H__

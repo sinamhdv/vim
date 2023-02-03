@@ -80,3 +80,9 @@ void string_null_terminate(String *str)
 		string_resize(str, str->len + 1);
 	str->arr[str->len] = 0;
 }
+
+void string_replace(String *str, size_t L, size_t R, char *s, size_t slen)
+{
+	string_remove(str, L, R);
+	string_insert(str, s, slen, L);
+}

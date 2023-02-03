@@ -342,6 +342,44 @@ int parse_command(char *split_cmd[], int pipe_mode)
 		return i;
 	}
 
+	else if (strcmp(split_cmd[0], "replace") == 0)
+	{
+		int _file = 0, _old = 0, _new = 0, _has_at = 0, _at = 0, _all = 0;
+		int i;
+		for (i = 0; ; i++)
+		{
+			if (pipe_mode && _new && (split_cmd[i] == NULL || split_cmd[i][0] == '=')) break;
+			if (!pipe_mode && _old && _new && (split_cmd[i] == NULL || split_cmd[i][0] == '=')) break;
+
+			if (strcmp(split_cmd[i], "--file") == 0) _file = ++i;
+			else if (strcmp(split_cmd[i], "--old") == 0)
+			{
+				if (pipe_mode) return -3;
+				_old = ++i;
+			}
+			else if (strcmp(split_cmd[i], "--new") == 0) _new = ++i;
+			else if (strcmp(split_cmd[i], "-all") == 0) _all = 1;
+			else if (strcmp(split_cmd[i], "-at") == 0)
+			{
+				_at = (int)strtoll(split_cmd[++i], NULL, 10);
+				_has_at = 1;
+			}
+		}
+
+		parsestr(split_cmd[_file]);
+		parsestr(split_cmd[_new]);
+
+		if (pipe_mode)
+		{
+			string_null_terminate(&pipebuf);
+			replace_command(split_cmd[_file], pipebuf.arr, split_cmd[_new], _has_at, _at, _all);
+		}
+		else
+			replace_command(split_cmd[_file], split_cmd[_old], split_cmd[_new], _has_at, _at, _all);
+
+		return i;
+	}
+
 	return -1;
 }
 

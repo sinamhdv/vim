@@ -595,15 +595,6 @@ void find_command(char *filename, int _count, int _has_at, int _at, int _all, in
 			while (res[size].L != -1) size++;
 			string_printf(&outbuf, "%lu\n", size);
 		}
-		else if (_has_at)
-		{
-			size_t size = 0;
-			while (res[size].L != -1) size++;
-			if (_at > size)
-				print_msg("Not enough instances of pattern");
-			else
-				string_printf(&outbuf, "%lu\n", (_byword ? get_word(&buf, res[_at - 1].L) : res[_at - 1].L));
-		}
 		else if (_all)
 		{
 			if (res[0].L == -1)
@@ -617,10 +608,66 @@ void find_command(char *filename, int _count, int _has_at, int _at, int _all, in
 		}
 		else
 		{
-			if (res[0].L == -1)
+			if (!_has_at) _at = 1;
+			size_t size = 0;
+			while (res[size].L != -1) size++;
+			if (_at > size)
 				print_msg("Pattern not found");
 			else
-				string_printf(&outbuf, "%lu\n", (_byword ? get_word(&buf, res[0].L) : res[0].L));
+				string_printf(&outbuf, "%lu\n", (_byword ? get_word(&buf, res[_at - 1].L) : res[_at - 1].L));
+		}
+		free(res);
+	}
+	free(path);
+}
+
+void replace_command(char *filename, char *old, char *new, int _has_at, int _at, int _all)
+{
+	if (_has_at && _all) {
+		print_msg("Error: Invalid options");
+		return;
+	}
+	else if (_has_at && _at <= 0) {
+		print_msg("Error: Invalid -at argument");
+		return;
+	}
+
+	char *tmp = strchr(old, '\n');
+	if (tmp) *tmp = 0;
+	parsestr_wildcard(old);
+	char *path = convert_path(filename);
+	if (load_buffer(&buf, path) != -1)
+	{
+		string_null_terminate(&buf);
+		FindAns *res = findall_buf(buf.arr, old);
+		if (_all)
+		{
+			if (res[0].L == -1)
+				print_msg("Error: Pattern not found");
+			else
+			{
+				size_t offset = 0;
+				size_t nlen = strlen(new);
+				for (size_t i = 0; res[i].L != -1; i++)
+				{
+					string_replace(&buf, res[i].L + offset, res[i].R + offset + 1, new, nlen);
+					offset += nlen - (res[i].R - res[i].L + 1);
+				}
+				save_buffer(&buf, path);
+			}
+		}
+		else
+		{
+			if (!_has_at) _at = 1;
+			size_t size = 0;
+			while (res[size].L != -1) size++;
+			if (_at > size)
+				print_msg("Pattern not found");
+			else
+			{
+				string_replace(&buf, res[_at - 1].L, res[_at - 1].R + 1, new, strlen(new));
+				save_buffer(&buf, path);
+			}
 		}
 		free(res);
 	}
