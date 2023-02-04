@@ -6,25 +6,7 @@ String outbuf;	// command output buffer
 String clip;	// clipboard
 String pipebuf;	// pipes buffer
 
-size_t pos2idx(String *buf, char *posstr)
-{
-	char *ptr = strchr(posstr, ':');
-	*ptr = 0;
-	size_t line_num = strtoull(posstr, NULL, 10);
-	size_t idx = strtoull(ptr + 1, NULL, 10);
-	*ptr = ':';
-	size_t i;
-	for (i = 0; line_num > 1 && i < buf->len; i++)
-	{
-		if (buf->arr[i] == '\n') line_num--;
-	}
-	if (line_num != 1) return -1;
-	if (i + idx > buf->len) return -1;
-	for (int j = i; j < i + idx; j++)
-		if (buf->arr[j] == '\n')
-			return -1;
-	return i + idx;
-}
+
 
 int load_buffer(String *buf, char *path)
 {
@@ -97,7 +79,7 @@ void insert_command(char *filename, char *posstr, char *str, size_t slen)
 	char *path = convert_path(filename);
 	if (load_buffer(&inpbuf, path) != -1)
 	{
-		size_t idx = pos2idx(&inpbuf, posstr);
+		size_t idx = posstr2idx(&inpbuf, posstr);
 		if (idx == -1)
 		{
 			print_msg("Error: Invalid position");
@@ -116,7 +98,7 @@ void selection_action(char *split_cmd[], int _file, int _pos, int _size, int _fw
 	char *path = convert_path(split_cmd[_file]);
 	if (load_buffer(&inpbuf, path) != -1)
 	{
-		size_t idx = pos2idx(&inpbuf, split_cmd[_pos]);
+		size_t idx = posstr2idx(&inpbuf, split_cmd[_pos]);
 		if (idx == -1)
 		{
 			print_msg("Error: Invalid position");
@@ -168,7 +150,7 @@ void paste_command(char *split_cmd[], int _file, int _pos)
 	char *path = convert_path(split_cmd[_file]);
 	if (load_buffer(&inpbuf, path) != -1)
 	{
-		size_t idx = pos2idx(&inpbuf, split_cmd[_pos]);
+		size_t idx = posstr2idx(&inpbuf, split_cmd[_pos]);
 		if (idx == -1)
 		{
 			print_msg("Error: Invalid position");

@@ -28,7 +28,7 @@ typedef struct
 
 #define STAR_CHAR '\x80'
 
-size_t pos2idx(String *buf, char *posstr);
+size_t posstr2idx(String *buf, char *posstr);
 int load_buffer(String *buf, char *path);
 void save_buffer(String *buf, char *path);
 void create_file(char *path);

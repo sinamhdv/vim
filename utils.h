@@ -30,5 +30,7 @@ int count_file_lines(FILE *fp);	// count the number of lines in a file without c
 char *get_backup_path(char *path);
 void copy_file(char *src, char *dst);
 int count_digits(int num);
+size_t pos2idx(String *buf, size_t line_num, size_t idx);
+size_t posstr2idx(String *buf, char *posstr);
 
 #endif	// __HEADER_UTILS_H__

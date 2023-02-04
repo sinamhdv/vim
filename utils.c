@@ -95,3 +95,28 @@ int count_digits(int num)
 	}
 	return cnt;
 }
+
+size_t pos2idx(String *buf, size_t line_num, size_t idx)
+{
+	size_t i;
+	for (i = 0; line_num > 1 && i < buf->len; i++)
+	{
+		if (buf->arr[i] == '\n') line_num--;
+	}
+	if (line_num != 1) return -1;
+	if (i + idx > buf->len) return -1;
+	for (int j = i; j < i + idx; j++)
+		if (buf->arr[j] == '\n')
+			return -1;
+	return i + idx;
+}
+
+size_t posstr2idx(String *buf, char *posstr)
+{
+	char *ptr = strchr(posstr, ':');
+	*ptr = 0;
+	size_t line_num = strtoull(posstr, NULL, 10);
+	size_t idx = strtoull(ptr + 1, NULL, 10);
+	*ptr = ':';
+	return pos2idx(buf, line_num, idx);
+}

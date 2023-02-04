@@ -25,6 +25,8 @@ extern String pipebuf;
 #define SCR_HEIGHT 55
 #define SCR_WIDTH 203
 
+#define TABSIZE 4
+
 #define MODE_COLOR 1
 #define FILENAME_COLOR 2
 #define LINENO_COLOR 3
