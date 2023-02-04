@@ -121,19 +121,30 @@ void refresh_buffer_vars(String *buf)
 	}
 	cursor_calc_lpos();
 
+	// cut adjustments
 	if (bottom_line > total_lines)
 	{
-		top_line -= bottom_line - total_lines;
-		if (top_line < 1) top_line = 1;
 		bottom_line = total_lines;
 	}
-
-	if (cursor_line < top_line || cursor_line > bottom_line)
+	if (cursor_line < top_line)
 	{
-		top_line = cursor_line - SCR_HEIGHT/2;
-		if (top_line < 1) top_line = 1;
+		top_line = cursor_line;
 		bottom_line = top_line + SCR_HEIGHT - 3;
 		if (bottom_line > total_lines) bottom_line = total_lines;
+	}
+
+	// paste adjustments
+	if (bottom_line - top_line < SCR_HEIGHT - 3 && total_lines > bottom_line)
+	{
+		bottom_line = total_lines;
+		if (bottom_line - top_line > SCR_HEIGHT - 3)
+			top_line = bottom_line - (SCR_HEIGHT - 3);
+	}
+	if (cursor_line > bottom_line)
+	{
+		bottom_line = cursor_line;
+		top_line = bottom_line - (SCR_HEIGHT - 3);
+		if (top_line < 1) top_line = 1;
 	}
 }
 
@@ -316,6 +327,8 @@ void remove_selection(void)
 		R = L;
 		L = tmp;
 	}
+	if (L == buf.len - 1) return;
+	if (R == buf.len - 1) R--;
 	string_remove(&buf, L, R + 1);
 	cursor_idx = L;
 	refresh_buffer_vars(&buf);
@@ -372,7 +385,8 @@ int input_loop(void)
 		if (cursor_line < top_line + 3 && top_line != 1)	// shift lines
 		{
 			top_line--;
-			bottom_line--;
+			if (bottom_line - top_line > SCR_HEIGHT - 3)
+				bottom_line--;
 		}
 		
 		int tmp = cursor_lpos;
@@ -436,16 +450,13 @@ int input_loop(void)
 			total_lines--;
 			cursor_idx--;
 			cursor_calc_lpos();
-			if (bottom_line > total_lines)
-			{
-				bottom_line--;
-				if (top_line > 1) top_line--;
-			}
-			if (cursor_line < top_line)
+			if (cursor_line < top_line)	// backspace in the first line
 			{
 				top_line--;
 				bottom_line--;
 			}
+			else if (bottom_line > total_lines)
+				bottom_line--;
 		}
 	}
 	//else if (mode == INSERT && key == KEY_DC) {}	// possible implementation of DEL key
@@ -463,14 +474,15 @@ int input_loop(void)
 		cursor_line++;
 		cursor_lpos = 0;
 		total_lines++;
-		if (total_lines <= SCR_HEIGHT - 2)
-			bottom_line++;
-		if (cursor_line > bottom_line)	// shift lines
+
+		if (cursor_line > bottom_line)	// enter in the last line
 		{
-			if (total_lines > SCR_HEIGHT - 2)
-				top_line++;
 			bottom_line++;
+			if (bottom_line - top_line > SCR_HEIGHT - 3)
+				top_line++;
 		}
+		else if (bottom_line - top_line < SCR_HEIGHT - 3)
+			bottom_line++;
 	}
 	
 	// visual mode
