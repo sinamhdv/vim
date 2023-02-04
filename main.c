@@ -15,6 +15,8 @@ int cursor_line = 1;	// cursor line number
 int cursor_lpos = 0;	// cursor position in line on screen
 int cursor_idx = 0;		// cursor index in buffer
 
+int saved_cursor;	// saved cursor index for visual mode
+
 void clearline(int num)
 {
 	move(num, 0);
@@ -74,10 +76,9 @@ void close_file(void)
 	filename = NULL;
 }
 
-// initialize global vars based a newly opened buffer
-void init_new_buf(String *buf)
+// ensure that the buffer ends with '\n'
+void terminate_with_LF(String *buf)
 {
-	// ensure that the buffer ends with '\n'
 	if (buf->len == 0)
 	{
 		string_resize(buf, 1);
@@ -86,10 +87,16 @@ void init_new_buf(String *buf)
 	}
 	else if (buf->arr[buf->len - 1] != '\n')
 	{
-		buf->arr[buf->len - 1] = '\n';
+		string_pushc(buf, '\n');
 	}
+}
 
+// initialize global vars based a newly opened buffer
+void init_new_buf(String *buf)
+{
+	terminate_with_LF(buf);
 	is_saved = (filename != NULL);
+	
 	total_lines = 0;
 	for (size_t i = 0; i < buf->len; i++)
 		total_lines += (buf->arr[i] == '\n');
@@ -100,6 +107,20 @@ void init_new_buf(String *buf)
 	cursor_line = 1;
 	cursor_lpos = 0;
 	cursor_idx = 0;
+}
+
+// refresh buffer global vars based on cursor_idx and top_line/bottom_line
+void refresh_buffer_vars(String *buf)
+{
+	terminate_with_LF(buf);
+	total_lines = 0;
+	for (size_t i = 0; i < buf->len; i++)
+	{
+		if (i == cursor_idx) cursor_line = total_lines + 1;
+		total_lines += (buf->arr[i] == '\n');
+	}
+	cursor_calc_lpos();
+
 }
 
 void open_file(char *path)
@@ -125,7 +146,7 @@ void print_msg(char *msg)
 	refresh();
 }
 
-void print_mode_filename(void)
+void print_status_bar(void)
 {
 	move(SCR_HEIGHT - 2, 0);
 	attron(COLOR_PAIR(MODE_COLOR));
@@ -139,21 +160,13 @@ void print_mode_filename(void)
 	if (!is_saved) addch('+');
 	int y, x;
 	getyx(stdscr, y, x);
+	for (; x < SCR_WIDTH - 30; x++)
+		addch(' ');
+	printw("%d:%d - %d", cursor_line, cursor_lpos, cursor_idx);
+	getyx(stdscr, y, x);
 	for (; x < SCR_WIDTH; x++)
 		addch(' ');
 	attroff(COLOR_PAIR(FILENAME_COLOR));
-}
-
-void print_line_numbers(void)
-{
-	lineno_width = count_digits(total_lines) + 1;
-	attron(COLOR_PAIR(LINENO_COLOR));
-	for (int i = 0; i < SCR_HEIGHT - 2 && i <= bottom_line - top_line; i++)
-	{
-		move(i, 0);
-		printw("%*d ", lineno_width - 1, top_line + i);
-	}
-	attroff(COLOR_PAIR(LINENO_COLOR));
 }
 
 void print_buffer(String *buf)
@@ -176,6 +189,24 @@ void print_buffer(String *buf)
 				for (int i = 0; i < TABSIZE - x % TABSIZE; i++)
 					addch(' ');
 			}
+			else if (*ptr == '{' || *ptr == '}')
+			{
+				attron(COLOR_PAIR(CRBRACE_COLOR));
+				addch(*ptr);
+				attroff(COLOR_PAIR(CRBRACE_COLOR));
+			}
+			else if (*ptr == '(' || *ptr == ')')
+			{
+				attron(COLOR_PAIR(BRACE_COLOR));
+				addch(*ptr);
+				attroff(COLOR_PAIR(BRACE_COLOR));
+			}
+			else if (*ptr == '[' || *ptr == ']')
+			{
+				attron(COLOR_PAIR(SQBRACE_COLOR));
+				addch(*ptr);
+				attroff(COLOR_PAIR(SQBRACE_COLOR));
+			}
 			else
 				addch(*ptr);
 			ptr++;
@@ -193,7 +224,7 @@ void position_cursor(void)
 void draw_window(void)
 {
 	clear();
-	print_mode_filename();
+	print_status_bar();
 	print_buffer(&buf);
 	position_cursor();
 	refresh();
@@ -231,6 +262,36 @@ void command_mode(char start_char)
 	}
 }
 
+void copy_selection(void)
+{
+	size_t L = saved_cursor;
+	size_t R = cursor_idx;
+	if (R < L)
+	{
+		size_t tmp = R;
+		R = L;
+		L = tmp;
+	}
+	string_free(&clip);
+	string_init(&clip, R - L + 1);
+	memcpy(clip.arr, buf.arr + L, R - L + 1);
+}
+
+void remove_selection(void)
+{
+	size_t L = saved_cursor;
+	size_t R = cursor_idx;
+	if (R < L)
+	{
+		size_t tmp = R;
+		R = L;
+		L = tmp;
+	}
+	string_remove(&buf, L, R + 1);
+	cursor_idx = L;
+	refresh_buffer_vars(&buf);
+}
+
 int cursor_right(void)
 {
 	if (buf.arr[cursor_idx] == '\n') return 0;
@@ -244,6 +305,26 @@ void cursor_home(void)
 {
 	cursor_lpos = 0;
 	while (cursor_idx > 0 && buf.arr[cursor_idx - 1] != '\n') cursor_idx--;
+}
+
+void cursor_left(void)
+{
+	int dist = cursor_idx;
+	cursor_home();
+	dist -= cursor_idx;
+	for (int i = 0; i < dist - 1; i++) cursor_right();
+}
+
+// use this to calculate cursor_lpos correctly when cursor_idx is correct
+cursor_calc_lpos(void)
+{
+	if (cursor_idx > 0 && buf.arr[cursor_idx - 1] != '\n')
+	{
+		cursor_left();
+		cursor_right();
+	}
+	else
+		cursor_left();
 }
 
 int input_loop(void)
@@ -297,11 +378,108 @@ int input_loop(void)
 	}
 	else if (key == KEY_LEFT || (mode != INSERT && key == 'h'))
 	{
-		int dist = cursor_idx;
-		cursor_home();
-		dist -= cursor_idx;
-		for (int i = 0; i < dist - 1; i++) cursor_right();
+		cursor_left();
 	}
+	
+	// insert mode
+	else if (mode == NORMAL && key == 'i')
+	{
+		mode = INSERT;
+	}
+	else if (mode == INSERT && key == KEY_ESC)
+	{
+		mode = NORMAL;
+	}
+	else if (mode == INSERT && key == KEY_BACKSPACE)
+	{
+		if (cursor_idx == 0) return 0;
+		is_saved = 0;
+		if (buf.arr[cursor_idx - 1] != '\n')
+		{
+			string_remove(&buf, cursor_idx - 1, cursor_idx);
+			cursor_idx--;
+			cursor_calc_lpos();
+		}
+		else
+		{
+			string_remove(&buf, cursor_idx - 1, cursor_idx);
+			cursor_line--;
+			total_lines--;
+			cursor_idx--;
+			cursor_calc_lpos();
+			if (bottom_line > total_lines)
+			{
+				bottom_line--;
+				if (top_line > 1) top_line--;
+			}
+			if (cursor_line < top_line)
+			{
+				top_line--;
+				bottom_line--;
+			}
+		}
+	}
+	//else if (mode == INSERT && key == KEY_DC) {}	// possible implementation of DEL key
+	else if (mode == INSERT && (isprint(key) || key == '\t'))
+	{
+		is_saved = 0;
+		string_insert(&buf, (char *)&key, 1, cursor_idx);
+		cursor_right();
+	}
+	else if (mode == INSERT && key == '\n')
+	{
+		is_saved = 0;
+		string_insert(&buf, (char *)&key, 1, cursor_idx);
+		cursor_idx++;
+		cursor_line++;
+		cursor_lpos = 0;
+		total_lines++;
+		if (total_lines <= SCR_HEIGHT - 2)
+			bottom_line++;
+		if (cursor_line > bottom_line)	// shift lines
+		{
+			if (total_lines > SCR_HEIGHT - 2)
+				top_line++;
+			bottom_line++;
+		}
+	}
+	
+	// visual mode
+	else if (mode == NORMAL && key == 'v')
+	{
+		mode = VISUAL;
+		saved_cursor = cursor_idx;
+	}
+	else if (mode == VISUAL && (key == KEY_ESC || key == 'v'))
+	{
+		mode = NORMAL;
+	}
+	else if (mode == VISUAL && key == 'd')	// cut
+	{
+		mode = NORMAL;
+		copy_selection();
+		remove_selection();		
+	}
+	else if (mode == VISUAL && key == 'y')	// copy
+	{
+		mode = NORMAL;
+		copy_selection();
+	}
+
+	else if (mode == NORMAL && key == '=')	// auto-indent
+	{
+		auto_indent_buf(&buf);
+		init_new_buf(&buf);
+		is_saved = 0;
+	}
+
+	else if (mode == NORMAL && key == 'p')	// paste
+	{
+		string_insert(&buf, clip.arr, clip.len, cursor_idx);
+		cursor_idx += clip.len;
+		refresh_buffer_vars(&buf);
+	}
+
 	return 0;
 }
 
@@ -323,6 +501,7 @@ int main(void)
 	keypad(stdscr, TRUE);	// enable getting input from arrow keys, F1, F2, etc.
 	noecho();	// disable echo when getting keyboard input
 	start_color();	// start using ncurses colors
+	set_escdelay(0);	// cancel the delay for ESC key
 	struct sigaction sigint_action = {{sigint_handler}};
 	sigaction(SIGINT, &sigint_action, NULL);
 
@@ -331,6 +510,9 @@ int main(void)
 	init_pair(FILENAME_COLOR, COLOR_WHITE, COLOR_BLUE);
 	init_pair(LINENO_COLOR, COLOR_WHITE, COLOR_BLUE);
 	init_pair(ERROR_COLOR, COLOR_RED, COLOR_BLACK);
+	init_pair(BRACE_COLOR, COLOR_GREEN, COLOR_BLACK);
+	init_pair(SQBRACE_COLOR, COLOR_RED, COLOR_BLACK);
+	init_pair(CRBRACE_COLOR, COLOR_MAGENTA, COLOR_BLACK);
 
 	// init editor
 	string_init(&buf, 0);

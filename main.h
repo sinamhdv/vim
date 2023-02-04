@@ -26,11 +26,15 @@ extern String pipebuf;
 #define SCR_WIDTH 203
 
 #define TABSIZE 4
+#define KEY_ESC 27
 
 #define MODE_COLOR 1
 #define FILENAME_COLOR 2
 #define LINENO_COLOR 3
 #define ERROR_COLOR 4
+#define BRACE_COLOR 5
+#define SQBRACE_COLOR 6
+#define CRBRACE_COLOR 7
 
 #define MAX_CMD_LEN 1024
 #define MAX_FILENAME 1024
