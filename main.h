@@ -64,5 +64,8 @@ void command_mode(char start_char);
 int input_loop(void);
 void sigint_handler(int signum);
 void cursor_calc_lpos(void);
+void remove_selection(void);
+void copy_selection(void);
+void refresh_buffer_vars(String *buf);
 
 #endif	// __HEADER_MAIN_H__

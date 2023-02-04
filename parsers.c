@@ -182,22 +182,25 @@ int parse_command(char *split_cmd[], int pipe_mode)
 	{
 		if (pipe_mode) return -2;
 		int _file = 0, _pos = 0, _size = 0, _fw = 0;
-		for (int i = 1; i < 8; i++)
+		int i;
+		for (i = 1; ; i++)
 		{
+			if (_pos && _size && (split_cmd[i] == NULL || split_cmd[i][0] == '=')) break;
+			
 			if (strcmp(split_cmd[i], "--file") == 0) _file = ++i;
 			else if (strcmp(split_cmd[i], "--pos") == 0) _pos = ++i;
 			else if (strcmp(split_cmd[i], "-size") == 0) _size = ++i;
 			else if (strcmp(split_cmd[i], "-f") == 0) _fw = 1;
 		}
 
-		parsestr(split_cmd[_file]);
+		if (_file) parsestr(split_cmd[_file]);
 
 		void (*action)(size_t, size_t);
 		if (strcmp(split_cmd[0], "remove") == 0) action = removestr;
 		else if (strcmp(split_cmd[0], "copy") == 0) action = copystr;
 		else action = cutstr;
 		selection_action(split_cmd, _file, _pos, _size, _fw, action);
-		return 8;
+		return i;
 	}
 
 	else if (strcmp(split_cmd[0], "paste") == 0)
@@ -240,11 +243,21 @@ int parse_command(char *split_cmd[], int pipe_mode)
 	else if (strcmp(split_cmd[0], "auto-indent") == 0)
 	{
 		if (pipe_mode) return -2;
-		parsestr(split_cmd[1]);
-		char *path = convert_path(split_cmd[1]);
-		auto_indent_file(path);
-		free(path);
-		return 2;
+		if (split_cmd[1] == NULL || split_cmd[1][0] == '=')
+		{
+			auto_indent_buf(&buf);
+			init_new_buf(&buf);
+			is_saved = 0;
+			return 1;
+		}
+		else
+		{
+			parsestr(split_cmd[1]);
+			char *path = convert_path(split_cmd[1]);
+			auto_indent_file(path);
+			free(path);
+			return 2;
+		}
 	}
 
 	else if (strcmp(split_cmd[0], "tree") == 0)

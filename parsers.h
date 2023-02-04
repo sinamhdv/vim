@@ -22,6 +22,9 @@ extern String outbuf;
 extern String clip;
 extern String pipebuf;
 
+extern char *filename;
+extern int is_saved;
+
 char *skip_space(char *cmd);
 
 /* read a token from the input line (with/without quotes)

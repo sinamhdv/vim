@@ -20,6 +20,9 @@ extern String outbuf;
 extern String clip;
 extern String pipebuf;
 
+extern int cursor_idx;
+extern int saved_cursor;
+
 typedef struct
 {
 	size_t L;

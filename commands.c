@@ -95,6 +95,47 @@ void insert_command(char *filename, char *posstr, char *str, size_t slen)
 
 void selection_action(char *split_cmd[], int _file, int _pos, int _size, int _fw, void (*action)(size_t, size_t))
 {
+	if (_file == 0)	// phase2 version
+	{
+		size_t idx = posstr2idx(&buf, split_cmd[_pos]);
+		if (idx == -1)
+		{
+			print_msg("Error: Invalid position");
+		}
+		else
+		{
+			size_t size = strtoull(split_cmd[_size], NULL, 10);
+			size_t L = idx - (!_fw ? size : 0);
+			size_t R = idx + (_fw ? size : 0);
+			if ((long long)L < 0 || R > buf.len)
+			{
+				print_msg("Error: Invalid size");
+			}
+			else
+			{
+				cursor_idx = L;
+				saved_cursor = R - 1;
+				if (action == removestr)
+				{
+					remove_selection();
+					is_saved = 0;
+				}
+				else if (action == copystr)
+				{
+					copy_selection();
+					refresh_buffer_vars(&buf);
+				}
+				else if (action == cutstr)
+				{
+					copy_selection();
+					remove_selection();
+					is_saved = 0;
+				}
+			}
+		}
+		return;
+	}
+
 	char *path = convert_path(split_cmd[_file]);
 	if (load_buffer(&inpbuf, path) != -1)
 	{
