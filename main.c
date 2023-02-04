@@ -109,7 +109,7 @@ void init_new_buf(String *buf)
 	cursor_idx = 0;
 }
 
-// refresh buffer global vars based on cursor_idx and top_line/bottom_line
+// refresh buffer global vars based on cursor_idx and previous top_line/bottom_line
 void refresh_buffer_vars(String *buf)
 {
 	terminate_with_LF(buf);
@@ -121,6 +121,20 @@ void refresh_buffer_vars(String *buf)
 	}
 	cursor_calc_lpos();
 
+	if (bottom_line > total_lines)
+	{
+		top_line -= bottom_line - total_lines;
+		if (top_line < 1) top_line = 1;
+		bottom_line = total_lines;
+	}
+
+	if (cursor_line < top_line || cursor_line > bottom_line)
+	{
+		top_line = cursor_line - SCR_HEIGHT/2;
+		if (top_line < 1) top_line = 1;
+		bottom_line = top_line + SCR_HEIGHT - 3;
+		if (bottom_line > total_lines) bottom_line = total_lines;
+	}
 }
 
 void open_file(char *path)
@@ -181,6 +195,19 @@ void print_buffer(String *buf)
 		attroff(COLOR_PAIR(LINENO_COLOR));
 		while (*ptr != '\n')
 		{
+			// selection highlighting
+			int highlight = 0;
+			int L = cursor_idx;
+			int R = saved_cursor;
+			if (R < L)
+			{
+				int tmp = R;
+				R = L;
+				L = tmp;
+			}
+			if (mode == VISUAL && ptr - buf->arr >= L && ptr - buf->arr <= R) highlight = 1;
+			if (highlight) attron(COLOR_PAIR(SELECTION_COLOR));
+
 			if (*ptr == '\t')
 			{
 				int y, x;
@@ -191,25 +218,27 @@ void print_buffer(String *buf)
 			}
 			else if (*ptr == '{' || *ptr == '}')
 			{
-				attron(COLOR_PAIR(CRBRACE_COLOR));
+				if (!highlight) attron(COLOR_PAIR(CRBRACE_COLOR));
 				addch(*ptr);
-				attroff(COLOR_PAIR(CRBRACE_COLOR));
+				if (!highlight) attroff(COLOR_PAIR(CRBRACE_COLOR));
 			}
 			else if (*ptr == '(' || *ptr == ')')
 			{
-				attron(COLOR_PAIR(BRACE_COLOR));
+				if (!highlight) attron(COLOR_PAIR(BRACE_COLOR));
 				addch(*ptr);
-				attroff(COLOR_PAIR(BRACE_COLOR));
+				if (!highlight) attroff(COLOR_PAIR(BRACE_COLOR));
 			}
 			else if (*ptr == '[' || *ptr == ']')
 			{
-				attron(COLOR_PAIR(SQBRACE_COLOR));
+				if (!highlight) attron(COLOR_PAIR(SQBRACE_COLOR));
 				addch(*ptr);
-				attroff(COLOR_PAIR(SQBRACE_COLOR));
+				if (!highlight) attroff(COLOR_PAIR(SQBRACE_COLOR));
 			}
 			else
 				addch(*ptr);
 			ptr++;
+
+			if (highlight) attroff(COLOR_PAIR(SELECTION_COLOR));
 		}
 		addch(*ptr++);
 	}
@@ -316,7 +345,7 @@ void cursor_left(void)
 }
 
 // use this to calculate cursor_lpos correctly when cursor_idx is correct
-cursor_calc_lpos(void)
+void cursor_calc_lpos(void)
 {
 	if (cursor_idx > 0 && buf.arr[cursor_idx - 1] != '\n')
 	{
@@ -459,6 +488,7 @@ int input_loop(void)
 		mode = NORMAL;
 		copy_selection();
 		remove_selection();		
+		is_saved = 0;
 	}
 	else if (mode == VISUAL && key == 'y')	// copy
 	{
@@ -513,10 +543,12 @@ int main(void)
 	init_pair(BRACE_COLOR, COLOR_GREEN, COLOR_BLACK);
 	init_pair(SQBRACE_COLOR, COLOR_RED, COLOR_BLACK);
 	init_pair(CRBRACE_COLOR, COLOR_MAGENTA, COLOR_BLACK);
+	init_pair(SELECTION_COLOR, COLOR_BLACK, COLOR_CYAN);
 
 	// init editor
 	string_init(&buf, 0);
 	init_new_buf(&buf);
+	is_saved = 1;
 
 	while (1)
 	{

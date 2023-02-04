@@ -35,6 +35,7 @@ extern String pipebuf;
 #define BRACE_COLOR 5
 #define SQBRACE_COLOR 6
 #define CRBRACE_COLOR 7
+#define SELECTION_COLOR 8
 
 #define MAX_CMD_LEN 1024
 #define MAX_FILENAME 1024
@@ -62,5 +63,6 @@ void draw_window(void);
 void command_mode(char start_char);
 int input_loop(void);
 void sigint_handler(int signum);
+void cursor_calc_lpos(void);
 
 #endif	// __HEADER_MAIN_H__
