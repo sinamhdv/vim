@@ -561,13 +561,13 @@ FindAns find_buf(char *str, char *pat)
 	char *space = strchr(pat, ' ');
 	if (space && star)	// complex wildcards
 	{
-		*star = 0;
+		/**star = 0;
 		char *ptr;
 		size_t begin = 0;
 		while ((ptr = strstr(str + begin, pat)) != NULL)
 		{
 
-		}
+		}*/
 	}
 	else if (star == pat)	// *a
 	{
@@ -575,14 +575,14 @@ FindAns find_buf(char *str, char *pat)
 	}
 	else if (star)	// a*
 	{
-		*star = 0;
+		/**star = 0;
 		char *ptr = strstr(str, pat);
 		if (ptr != NULL)
 		{
 			res.L = ptr - str;
 			res.R = ptr - str + plen - 2;
 			while (!isspace(str[res.R + 1]) && str[res.R + 1] != '\0') res.R++;
-		}
+		}*/
 	}
 	else	// no wildcard
 	{
