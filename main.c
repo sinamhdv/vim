@@ -668,6 +668,14 @@ int main(void)
 	init_new_buf(&buf);
 	is_saved = 1;
 
+	// move(10, 10);
+	// char str[] = "this is so cool this is so cool this is so cool";
+	// char pat[] = "h\x80";
+	// FindAns *res = findall_buf(str, pat);
+	// printw("%d %d", res[1].L, res[1].R);
+	// refresh();
+	// getch();
+
 	while (1)
 	{
 		draw_window();

@@ -575,14 +575,15 @@ FindAns find_buf(char *str, char *pat)
 	}
 	else if (star)	// a*
 	{
-		/**star = 0;
+		*star = 0;
 		char *ptr = strstr(str, pat);
 		if (ptr != NULL)
 		{
 			res.L = ptr - str;
 			res.R = ptr - str + plen - 2;
 			while (!isspace(str[res.R + 1]) && str[res.R + 1] != '\0') res.R++;
-		}*/
+		}
+		*star = STAR_CHAR;
 	}
 	else	// no wildcard
 	{
