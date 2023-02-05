@@ -520,6 +520,7 @@ int input_loop(void)
 		string_insert(&buf, clip.arr, clip.len, cursor_idx);
 		cursor_idx += clip.len;
 		refresh_buffer_vars(&buf);
+		is_saved = 0;
 	}
 
 	return 0;

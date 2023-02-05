@@ -153,10 +153,13 @@ int parse_command(char *split_cmd[], int pipe_mode)
 
 	else if (strcmp(split_cmd[0], "insert") == 0)
 	{
-		int _argc = 7 - 2 * pipe_mode;
 		int _file = 0, _str = 0, _pos = 0;
-		for (int i = 1; i < _argc; i++)
+		int i;
+		for (i = 1; ; i++)
 		{
+			if (pipe_mode && _pos && (split_cmd[i] == NULL || split_cmd[i][0] == '=')) break;
+			if (!pipe_mode && _pos && _str && (split_cmd[i] == NULL || split_cmd[i][0] == '=')) break;
+
 			if (strcmp(split_cmd[i], "--file") == 0) _file = ++i;
 			else if (strcmp(split_cmd[i], "--str") == 0)
 			{
@@ -166,14 +169,14 @@ int parse_command(char *split_cmd[], int pipe_mode)
 			else if (strcmp(split_cmd[i], "--pos") == 0) _pos = ++i;
 		}
 		
-		parsestr(split_cmd[_file]);
+		if (_file) parsestr(split_cmd[_file]);
 		if (!pipe_mode) parsestr(split_cmd[_str]);
 
 		if (pipe_mode)
-			insert_command(split_cmd[_file], split_cmd[_pos], pipebuf.arr, pipebuf.len);
+			insert_command((_file ? split_cmd[_file] : NULL), split_cmd[_pos], pipebuf.arr, pipebuf.len);
 		else
-			insert_command(split_cmd[_file], split_cmd[_pos], split_cmd[_str], strlen(split_cmd[_str]));
-		return _argc;
+			insert_command((_file ? split_cmd[_file] : NULL), split_cmd[_pos], split_cmd[_str], strlen(split_cmd[_str]));
+		return i;
 	}
 
 	else if (strcmp(split_cmd[0], "remove") == 0 || \
@@ -186,7 +189,7 @@ int parse_command(char *split_cmd[], int pipe_mode)
 		for (i = 1; ; i++)
 		{
 			if (_pos && _size && (split_cmd[i] == NULL || split_cmd[i][0] == '=')) break;
-			
+
 			if (strcmp(split_cmd[i], "--file") == 0) _file = ++i;
 			else if (strcmp(split_cmd[i], "--pos") == 0) _pos = ++i;
 			else if (strcmp(split_cmd[i], "-size") == 0) _size = ++i;
@@ -207,14 +210,17 @@ int parse_command(char *split_cmd[], int pipe_mode)
 	{
 		if (pipe_mode) return -2;
 		int _file = 0, _pos = 0;
-		for (int i = 1; i < 5; i++)
+		int i;
+		for (i = 1; ; i++)
 		{
+			if (split_cmd[i] == NULL || split_cmd[i][0] == '=') break;
+
 			if (strcmp(split_cmd[i], "--file") == 0) _file = ++i;
 			else if (strcmp(split_cmd[i], "--pos") == 0) _pos = ++i;
 		}
-		parsestr(split_cmd[_file]);
+		if (_file) parsestr(split_cmd[_file]);
 		paste_command(split_cmd, _file, _pos);
-		return 5;
+		return i;
 	}
 
 	else if (strcmp(split_cmd[0], "compare") == 0)

@@ -76,6 +76,23 @@ void cat_file(char *path)
 
 void insert_command(char *filename, char *posstr, char *str, size_t slen)
 {
+	if (filename == NULL)	// phase2 version
+	{
+		size_t idx = posstr2idx(&buf, posstr);
+		if (idx == -1)
+		{
+			print_msg("Error: Invalid position");
+		}
+		else
+		{
+			string_insert(&buf, str, slen, idx);
+			cursor_idx = idx + slen;
+			refresh_buffer_vars(&buf);
+			is_saved = 0;
+		}
+		return;
+	}
+
 	char *path = convert_path(filename);
 	if (load_buffer(&inpbuf, path) != -1)
 	{
@@ -188,6 +205,23 @@ void pastestr(size_t idx)
 
 void paste_command(char *split_cmd[], int _file, int _pos)
 {
+	if (!_file)	// phase2 version
+	{
+		size_t idx = posstr2idx(&buf, split_cmd[_pos]);
+		if (idx == -1)
+		{
+			print_msg("Error: Invalid position");
+		}
+		else
+		{
+			string_insert(&buf, clip.arr, clip.len, idx);
+			cursor_idx = idx + clip.len;
+			refresh_buffer_vars(&buf);
+			is_saved = 0;
+		}
+		return;
+	}
+
 	char *path = convert_path(split_cmd[_file]);
 	if (load_buffer(&inpbuf, path) != -1)
 	{
