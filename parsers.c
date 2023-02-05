@@ -128,7 +128,8 @@ int parse_command(char *split_cmd[], int pipe_mode)
 		string_init(&pipebuf, outbuf.len);
 		memcpy(pipebuf.arr, outbuf.arr, outbuf.len);
 	}
-	string_clear(&outbuf);
+	string_free(&outbuf);
+	string_init(&outbuf, 0);
 
 	if (strcmp(split_cmd[0], "create") == 0)
 	{
