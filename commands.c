@@ -698,6 +698,55 @@ void replace_command(char *filename, char *old, char *new, int _has_at, int _at,
 	char *tmp = strchr(old, '\n');
 	if (tmp) *tmp = 0;
 	parsestr_wildcard(old);
+	if (old[0] == '\0')
+	{
+		print_msg("Error: empty pattern");
+		return;
+	}
+
+	if (filename == NULL)	// phase2 version
+	{
+		string_null_terminate(&buf);
+		FindAns *res = findall_buf(buf.arr, old);
+		if (_all)
+		{
+			if (res[0].L == -1)
+				print_msg("Error: Pattern not found");
+			else
+			{
+				create_backup_buf();
+				size_t offset = 0;
+				size_t nlen = strlen(new);
+				for (size_t i = 0; res[i].L != -1; i++)
+				{
+					string_replace(&buf, res[i].L + offset, res[i].R + offset + 1, new, nlen);
+					offset += nlen - (res[i].R - res[i].L + 1);
+				}
+				cursor_idx = res[0].L;
+				refresh_buffer_vars(&buf);
+				is_saved = 0;
+			}
+		}
+		else
+		{
+			if (!_has_at) _at = 1;
+			size_t size = 0;
+			while (res[size].L != -1) size++;
+			if (_at > size)
+				print_msg("Pattern not found");
+			else
+			{
+				create_backup_buf();
+				string_replace(&buf, res[_at - 1].L, res[_at - 1].R + 1, new, strlen(new));
+				cursor_idx = res[_at - 1].L;
+				refresh_buffer_vars(&buf);
+				is_saved = 0;
+			}
+		}
+		free(res);
+		return;
+	}
+
 	char *path = convert_path(filename);
 	if (load_buffer(&inpbuf, path) != -1)
 	{

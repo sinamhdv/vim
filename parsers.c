@@ -400,16 +400,18 @@ int parse_command(char *split_cmd[], int pipe_mode)
 			}
 		}
 
-		parsestr(split_cmd[_file]);
+		if (_file) parsestr(split_cmd[_file]);
 		parsestr(split_cmd[_new]);
 
 		if (pipe_mode)
 		{
 			string_null_terminate(&pipebuf);
-			replace_command(split_cmd[_file], pipebuf.arr, split_cmd[_new], _has_at, _at, _all);
+			replace_command((_file ? split_cmd[_file] : NULL), pipebuf.arr, split_cmd[_new], _has_at, _at, _all);
 		}
 		else
-			replace_command(split_cmd[_file], split_cmd[_old], split_cmd[_new], _has_at, _at, _all);
+		{
+			replace_command((_file ? split_cmd[_file] : NULL), split_cmd[_old], split_cmd[_new], _has_at, _at, _all);
+		}
 
 		return i;
 	}
