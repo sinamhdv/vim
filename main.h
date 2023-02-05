@@ -67,5 +67,7 @@ void cursor_calc_lpos(void);
 void remove_selection(void);
 void copy_selection(void);
 void refresh_buffer_vars(String *buf);
+void create_backup_buf(void);
+void undo_buf(void);
 
 #endif	// __HEADER_MAIN_H__

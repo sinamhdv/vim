@@ -2,6 +2,13 @@
 
 char *mode_names[] = {"NORMAL", "INSERT", "VISUAL"};
 
+String buf;			// the editor's buffer
+String buf_backup;	// undo backup buffer
+String inpbuf;		// command input buffer
+String outbuf;		// command output buffer
+String pipebuf;		// pipes buffer
+String clip;		// clipboard
+
 Mode mode = NORMAL;		// current editor mode
 char *filename = NULL;	// current filename
 int is_saved = 1;	// is the current buffer saved?
@@ -14,7 +21,7 @@ int lineno_width;	// the width of the line numbers
 int cursor_line = 1;	// cursor line number
 int cursor_lpos = 0;	// cursor position in line on screen
 int cursor_idx = 0;		// cursor index in buffer
-
+int cursor_backup_idx;	// undo backup cursor index
 int saved_cursor;	// saved cursor index for visual mode
 
 void clearline(int num)
@@ -72,6 +79,7 @@ void close_file(void)
 		if (ch != 'N' && ch != 'n') save_file();
 	}
 	string_free(&buf);
+	string_free(&buf_backup);
 	free(filename);
 	filename = NULL;
 }
@@ -107,6 +115,7 @@ void init_new_buf(String *buf)
 	cursor_line = 1;
 	cursor_lpos = 0;
 	cursor_idx = 0;
+	cursor_backup_idx = -1;
 }
 
 // refresh buffer global vars based on cursor_idx and previous top_line/bottom_line
@@ -369,6 +378,31 @@ void cursor_calc_lpos(void)
 		cursor_left();
 }
 
+void create_backup_buf(void)
+{
+	string_free(&buf_backup);
+	string_init(&buf_backup, buf.len);
+	memcpy(buf_backup.arr, buf.arr, buf.len);
+	cursor_backup_idx = cursor_idx;
+}
+
+void undo_buf(void)
+{
+	if (cursor_backup_idx == -1)
+	{
+		print_msg("Error: No change to undo");
+		return;
+	}
+	String tmp = buf;
+	buf = buf_backup;
+	buf_backup = tmp;
+	int ctmp = cursor_idx;
+	cursor_idx = cursor_backup_idx;
+	cursor_backup_idx = ctmp;
+	refresh_buffer_vars(&buf);
+	is_saved = 0;
+}
+
 int input_loop(void)
 {
 	int key = getch();
@@ -428,6 +462,7 @@ int input_loop(void)
 	else if (mode == NORMAL && key == 'i')
 	{
 		mode = INSERT;
+		create_backup_buf();
 	}
 	else if (mode == INSERT && key == KEY_ESC)
 	{
@@ -498,6 +533,7 @@ int input_loop(void)
 	else if (mode == VISUAL && key == 'd')	// cut
 	{
 		mode = NORMAL;
+		create_backup_buf();
 		copy_selection();
 		remove_selection();		
 		is_saved = 0;
@@ -510,17 +546,25 @@ int input_loop(void)
 
 	else if (mode == NORMAL && key == '=')	// auto-indent
 	{
+		create_backup_buf();
 		auto_indent_buf(&buf);
-		init_new_buf(&buf);
+		cursor_idx = 0;
+		refresh_buffer_vars(&buf);
 		is_saved = 0;
 	}
 
 	else if (mode == NORMAL && key == 'p')	// paste
 	{
+		create_backup_buf();
 		string_insert(&buf, clip.arr, clip.len, cursor_idx);
 		cursor_idx += clip.len;
 		refresh_buffer_vars(&buf);
 		is_saved = 0;
+	}
+
+	else if (mode == NORMAL && key == 'u')	// undo
+	{
+		undo_buf();
 	}
 
 	return 0;
@@ -529,10 +573,11 @@ int input_loop(void)
 void sigint_handler(int signum)
 {
 	string_free(&buf);
+	string_free(&buf_backup);
 	string_free(&inpbuf);
 	string_free(&outbuf);
-	string_free(&clip);
 	string_free(&pipebuf);
+	string_free(&clip);
 	endwin();
 	exit(0);
 }

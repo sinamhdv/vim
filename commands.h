@@ -16,9 +16,11 @@
 #include "main.h"
 
 extern String buf;
+extern String buf_backup;
+extern String inpbuf;
 extern String outbuf;
-extern String clip;
 extern String pipebuf;
+extern String clip;
 
 extern int cursor_idx;
 extern int saved_cursor;

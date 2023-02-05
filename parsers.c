@@ -239,11 +239,19 @@ int parse_command(char *split_cmd[], int pipe_mode)
 	else if (strcmp(split_cmd[0], "undo") == 0)
 	{
 		if (pipe_mode) return -2;
-		parsestr(split_cmd[2]);
-		char *path = convert_path(split_cmd[2]);
-		undo(path);
-		free(path);
-		return 3;
+		if (split_cmd[1] == NULL || split_cmd[1][0] == '=')
+		{
+			undo_buf();
+			return 1;
+		}
+		else
+		{
+			parsestr(split_cmd[2]);
+			char *path = convert_path(split_cmd[2]);
+			undo(path);
+			free(path);
+			return 3;
+		}
 	}
 
 	else if (strcmp(split_cmd[0], "auto-indent") == 0)
@@ -251,8 +259,10 @@ int parse_command(char *split_cmd[], int pipe_mode)
 		if (pipe_mode) return -2;
 		if (split_cmd[1] == NULL || split_cmd[1][0] == '=')
 		{
+			create_backup_buf();
 			auto_indent_buf(&buf);
-			init_new_buf(&buf);
+			cursor_idx = 0;
+			refresh_buffer_vars(&buf);
 			is_saved = 0;
 			return 1;
 		}

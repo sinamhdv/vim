@@ -1,13 +1,5 @@
 #include "commands.h"
 
-String buf;		// the editor's buffer
-String inpbuf;	// command input buffer
-String outbuf;	// command output buffer
-String clip;	// clipboard
-String pipebuf;	// pipes buffer
-
-
-
 int load_buffer(String *buf, char *path)
 {
 	if (address_error(path)) return -1;
@@ -85,6 +77,7 @@ void insert_command(char *filename, char *posstr, char *str, size_t slen)
 		}
 		else
 		{
+			create_backup_buf();
 			string_insert(&buf, str, slen, idx);
 			cursor_idx = idx + slen;
 			refresh_buffer_vars(&buf);
@@ -130,20 +123,26 @@ void selection_action(char *split_cmd[], int _file, int _pos, int _size, int _fw
 			}
 			else
 			{
-				cursor_idx = L;
-				saved_cursor = R - 1;
 				if (action == removestr)
 				{
+					create_backup_buf();
+					cursor_idx = L;
+					saved_cursor = R - 1;
 					remove_selection();
 					is_saved = 0;
 				}
 				else if (action == copystr)
 				{
+					cursor_idx = L;
+					saved_cursor = R - 1;
 					copy_selection();
 					refresh_buffer_vars(&buf);
 				}
 				else if (action == cutstr)
 				{
+					create_backup_buf();
+					cursor_idx = L;
+					saved_cursor = R - 1;
 					copy_selection();
 					remove_selection();
 					is_saved = 0;
@@ -173,7 +172,7 @@ void selection_action(char *split_cmd[], int _file, int _pos, int _size, int _fw
 			else
 			{
 				action(L, R);
-				save_buffer(&inpbuf, path);
+				if (action != copystr) save_buffer(&inpbuf, path);
 			}
 		}
 	}
@@ -214,6 +213,7 @@ void paste_command(char *split_cmd[], int _file, int _pos)
 		}
 		else
 		{
+			create_backup_buf();
 			string_insert(&buf, clip.arr, clip.len, idx);
 			cursor_idx = idx + clip.len;
 			refresh_buffer_vars(&buf);
