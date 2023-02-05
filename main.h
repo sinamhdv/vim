@@ -69,5 +69,6 @@ void copy_selection(void);
 void refresh_buffer_vars(String *buf);
 void create_backup_buf(void);
 void undo_buf(void);
+void graphical_find(char *pat);
 
 #endif	// __HEADER_MAIN_H__

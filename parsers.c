@@ -360,15 +360,19 @@ int parse_command(char *split_cmd[], int pipe_mode)
 				_has_at = 1;
 			}
 		}
-		parsestr(split_cmd[_file]);
+		if (_file) parsestr(split_cmd[_file]);
 
 		if (pipe_mode)
 		{
 			string_null_terminate(&pipebuf);
-			find_command(split_cmd[_file], _count, _has_at, _at, _all, _byword, pipebuf.arr);
+			if (_file) find_command(split_cmd[_file], _count, _has_at, _at, _all, _byword, pipebuf.arr);
+			else graphical_find(pipebuf.arr);
 		}
 		else
-			find_command(split_cmd[_file], _count, _has_at, _at, _all, _byword, split_cmd[_str]);
+		{
+			if (_file) find_command(split_cmd[_file], _count, _has_at, _at, _all, _byword, split_cmd[_str]);
+			else graphical_find(split_cmd[_str]);
+		}
 		return i;
 	}
 

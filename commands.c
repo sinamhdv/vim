@@ -641,6 +641,11 @@ void find_command(char *filename, int _count, int _has_at, int _at, int _all, in
 
 	char *tmp = strchr(pat, '\n');
 	if (tmp) *tmp = 0;
+	if (pat[0] == '\0')
+	{
+		print_msg("Error: empty pattern");
+		return;
+	}
 	parsestr_wildcard(pat);
 	char *path = convert_path(filename);
 	if (load_buffer(&inpbuf, path) != -1)

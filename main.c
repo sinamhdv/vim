@@ -24,6 +24,8 @@ int cursor_idx = 0;		// cursor index in buffer
 int cursor_backup_idx;	// undo backup cursor index
 int saved_cursor;	// saved cursor index for visual mode
 
+FindAns *find_matches;	// matches for find that should be highlighted
+
 void clearline(int num)
 {
 	move(num, 0);
@@ -226,6 +228,17 @@ void print_buffer(String *buf)
 				L = tmp;
 			}
 			if (mode == VISUAL && ptr - buf->arr >= L && ptr - buf->arr <= R) highlight = 1;
+			if (mode == NORMAL && find_matches != NULL)	// find highlighting
+			{
+				for (int i = 0; find_matches[i].L != -1; i++)
+				{
+					if (ptr - buf->arr >= find_matches[i].L && ptr - buf->arr <= find_matches[i].R)
+					{
+						highlight = 1;
+						break;
+					}
+				}
+			}
 			if (highlight) attron(COLOR_PAIR(SELECTION_COLOR));
 
 			if (*ptr == '\t')
@@ -308,6 +321,10 @@ void command_mode(char start_char)
 			close_file();
 			sigint_handler(0);
 		}
+	}
+	else
+	{
+		graphical_find(cmd);
 	}
 }
 
@@ -401,6 +418,49 @@ void undo_buf(void)
 	cursor_backup_idx = ctmp;
 	refresh_buffer_vars(&buf);
 	is_saved = 0;
+}
+
+void graphical_find(char *pat)
+{
+	char *tmp = strchr(pat, '\n');
+	if (tmp) *tmp = 0;
+	if (pat[0] == '\0')
+	{
+		print_msg("Error: empty pattern");
+		return;
+	}
+	parsestr_wildcard(pat);
+	string_null_terminate(&buf);
+	find_matches = findall_buf(buf.arr, pat);
+	if (find_matches[0].L == -1)
+	{
+		print_msg("Pattern not found");
+		free(find_matches);
+		find_matches = NULL;
+		return;
+	}
+	int cur_match = 0;
+	cursor_idx = find_matches[0].L;
+	refresh_buffer_vars(&buf);
+	draw_window();
+	while (1)
+	{
+		int ch = getch();
+		if (ch == 'n')
+		{
+			cur_match++;
+			if (find_matches[cur_match].L == -1) cur_match = 0;
+			cursor_idx = find_matches[cur_match].L;
+			refresh_buffer_vars(&buf);
+			draw_window();
+		}
+		else
+		{
+			free(find_matches);
+			find_matches = NULL;
+			break;
+		}
+	}
 }
 
 int input_loop(void)
